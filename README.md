@@ -27,7 +27,7 @@ Should run as systemd service under newly added user "minter-guard".
 
 ```
 yum install -y https://centos7.iuscommunity.org/ius-release.rpm
-yum -y install python36u-setuptools python36u python36u-devel python36u-libs python36u-pip python36u-tkinter python36u-tools gcc
+yum -y install python36u-setuptools python36u python36u-devel python36u-libs python36u-pip python36u-tkinter python36u-tools gcc git
 ```
 
 ### Rest preparation
@@ -35,11 +35,13 @@ yum -y install python36u-setuptools python36u python36u-devel python36u-libs pyt
 Execute step-by-step:
 
 ```
-pip install --upgrade pip
+pip3.6 install --upgrade pip
 useradd minter-guard
-su - minter-guard
-pip3 install virtualenv
+cd /home/minter-guard
+pip3.6 install virtualenv
 virtualenv appenv
+chown -R minter-guard:minter-guard /home/minter-guard
+su - minter-guard
 source appenv/bin/activate
 python -V
 pip install git+https://github.com/U-node/minter-guard
