@@ -26,7 +26,7 @@ Should run as systemd service under newly added user "minter-guard".
 ### Install related packages
 
 ```
-yum -y install epel-release
+yum install -y https://centos7.iuscommunity.org/ius-release.rpm
 yum -y install python36u-setuptools python36u python36u-devel python36u-libs python36u-pip python36u-tkinter python36u-tools gcc
 ```
 
