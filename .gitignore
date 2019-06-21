@@ -1,0 +1,4 @@
+/appenv/
+/__pycache__/
+*.sublime*
+*.log
