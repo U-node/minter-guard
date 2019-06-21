@@ -3,9 +3,9 @@
 <p align="center">
 </p>
 
-Python minter-guard service.
+# Python minter-guard service.
 
-This is the "light" opensource version for everyone. OFC no guarantees, etc. Redused part of our solution, used in prodiction enviroment.
+This is the "light" opensource version for everyone. OFC no guarantees, etc. Reduced part of our solution, used in production enviroment.
 
 You can use it on any third-parity/rented servers. No need to store key on server for TX_OFF. It's possible to modify txgenerator to use it completely offline!
 
@@ -44,6 +44,7 @@ source appenv/bin/activate
 python -V
 pip install git+https://github.com/U-node/minter-guard
 pip install git+https://github.com/U-node/minter-sdk
+exit
 ```
 
 ### Create startup script
@@ -90,11 +91,14 @@ API_URL = http://127.0.0.1:8841/
 PUB_KEY = Mpd30a965324ffd01c3b61e898137bd6eacd69243b43512ab1dde1deca697f39ad
 SET_OFF_TX = 
 MISSED_BLOCKS = 3
+
+[SERVICE]
+LOG = /home/minter-guard/minter-guard.log
 ```
 Note, that you **MUST** provide correct:
 1. API node address.
 2. PUB_KEY of your node.
-3. MISSED_BLOCKS. This is trigger parameter to execite OFF_TX transaction. Note, that after execution of TX, your node will MISS _at least_ 2 next blocks.
+3. MISSED_BLOCKS. This is trigger parameter to execute OFF_TX transaction. Note, that after execution of TX, your node will MISS _at least_ 2 next blocks.
 
 API node **MUST** be synced to network **COMPLETELY**.
 Provided txgenerator uses API node to get nonce for OFF_TX
@@ -148,5 +152,5 @@ service minter-guard start
 
 Check for errors:
 ```
-tail -F /home/minter-guard/appenv/lib/python3.6/site-packages/minterguard/guard.log
+tail -F /home/minter-guard/minter-guard.log
 ```
