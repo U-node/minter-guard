@@ -14,21 +14,17 @@ import configparser
 import logging
 import sys
 import time
-import os
 from mintersdk.minterapi import MinterAPI
 from mintersdk.sdk.transactions import MinterTx, MinterSetCandidateOffTx
 
 
-DIR = os.path.dirname(os.path.abspath(__file__))
-
-
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
-fhandler = logging.FileHandler(os.path.join(DIR, 'guard.log'))
-fhandler.setLevel(logging.INFO)
 formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-fhandler.setFormatter(formatter)
-logger.addHandler(fhandler)
+shandler = logging.StreamHandler()
+shandler.setLevel(logging.INFO)
+shandler.setFormatter(formatter)
+logger.addHandler(shandler)
 
 
 class Guard(object):
@@ -119,6 +115,16 @@ if __name__ == '__main__':
         if len(sys.argv) == 2 and '--config=' in sys.argv[1]:
             config = configparser.ConfigParser()
             config.read(sys.argv[1].split('=')[1])
+
+            # If log file path is provided in config file, create file handler
+            # and remove stream handler
+            if 'SERVICE' in config.sections() and config['SERVICE'].get('LOG') and \
+               config['SERVICE']['LOG'] != '':
+                logger.removeHandler(shandler)
+                fhandler = logging.FileHandler(config['SERVICE']['LOG'])
+                fhandler.setLevel(logging.INFO)
+                fhandler.setFormatter(formatter)
+                logger.addHandler(fhandler)
 
             # Check sections
             for section in ['API', 'NODE']:
