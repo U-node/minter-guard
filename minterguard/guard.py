@@ -17,7 +17,11 @@ import logging
 import sys
 import time
 from mintersdk.minterapi import MinterAPI
-from mintersdk.sdk.transactions import MinterTx, MinterSetCandidateOffTx
+from mintersdk.sdk.transactions import (
+    MinterTx,
+    MinterSetCandidateOffTx,
+    MinterSetCandidateOnTx
+)
 
 
 logger = logging.getLogger(__name__)
@@ -51,18 +55,6 @@ class Guard(object):
         self.set_off_tx = set_off_tx
         self.missed_blocks = int(missed_blocks)
 
-        # Check set off tx to be valid
-        tx = MinterTx.from_raw(self.set_off_tx)
-        if not isinstance(tx, MinterSetCandidateOffTx):
-            raise Exception('Set off tx is not instance of MinterSetCandidateOffTx')
-
-        nonce = self.minterapi.get_nonce(tx.from_mx)
-        if tx.nonce != nonce:
-            raise Exception('Set off tx has {} nonce, expected {}'.format(
-                tx.nonce,
-                nonce
-            ))
-
     def track(self):
         """
         Tracking method
@@ -70,6 +62,13 @@ class Guard(object):
 
         while True:
             try:
+                # Every time validate set off tx
+                self.validate_tx(
+                    minterapi=self.minterapi,
+                    rawtx=self.set_off_tx,
+                    vclass=MinterSetCandidateOffTx
+                )
+
                 # Get missed blocks
                 response = self.minterapi.get_missed_blocks(
                     public_key=self.pub_key
@@ -106,6 +105,32 @@ class Guard(object):
 
             # Wait a second between each loop
             time.sleep(1)
+
+    @staticmethod
+    def validate_tx(minterapi, rawtx, vclass):
+        """
+        Transaction validation method
+        Args:
+            minterapi (object): Minter API instance
+            rawtx (str): raw transaction
+            vclass (object): transaction class from sdk.transactions to be
+                             compared with
+        Returns:
+            Only raises an Exception if something wrong
+        """
+
+        # Check tx to be valid class
+        tx = MinterTx.from_raw(rawtx)
+        if not isinstance(tx, vclass):
+            raise Exception('Set off tx is not instance of {}'.format(vclass))
+
+        # Check nonce
+        nonce = minterapi.get_nonce(tx.from_mx)
+        if tx.nonce != nonce:
+            raise Exception('Tx has {} nonce, expected {}'.format(
+                tx.nonce,
+                nonce
+            ))
 
 
 if __name__ == '__main__':
@@ -173,6 +198,13 @@ if __name__ == '__main__':
                config['NODE']['set_on_tx'] == '':
                 raise Exception('Please, set "set_on_tx" in config file')
 
+            # Validate tx
+            Guard.validate_tx(
+                minterapi=minterapi,
+                rawtx=config['NODE']['set_on_tx'],
+                vclass=MinterSetCandidateOnTx
+            )
+
             # If everything is ok, send tx
             response = minterapi.send_transaction(tx=config['NODE']['set_on_tx'])
             if response.get('error'):
@@ -180,6 +212,14 @@ if __name__ == '__main__':
 
             logger.info('Set candidate ON transaction sent')
         elif '--off' in sys.argv:
+            # Validate tx
+            Guard.validate_tx(
+                minterapi=minterapi,
+                rawtx=config['NODE']['set_off_tx'],
+                vclass=MinterSetCandidateOffTx
+            )
+
+            # If everything is ok, send tx
             response = minterapi.send_transaction(tx=config['NODE']['set_off_tx'])
             if response.get('error'):
                 raise Exception(response['error'])
