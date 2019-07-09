@@ -1,13 +1,15 @@
 """
 Script, which can be used as a tracking service for node.
 
-It accepts only one argument, if it is --config argument. You should provide
-path to config file to read params from.
-Or you can provide all needed arguments in command line:
-    --api-url=
-    --pub-key=
-    --set-off-tx=
-    --missed-blocks= (this argument is optional and is 4 by default)
+There are two ways of using script:
+    - manual
+    - automatic (service)
+
+It accepts at least one required argument --config (path to a config file)
+If there are no more arguments provided, we treat it as automatic work mode.
+
+Other manual arguments are --on or --off.
+You can use it for manual setting your node on or off.
 """
 
 import configparser
@@ -32,10 +34,10 @@ class Guard(object):
     Guard class
     """
 
-    def __init__(self, api_url, pub_key, set_off_tx, missed_blocks=4):
+    def __init__(self, minterapi, pub_key, set_off_tx, missed_blocks=4):
         """
         Args:
-            api_url (str): URL for Minter API
+            minterapi (MinterAPI): Minter API instance
             pub_key (str): Pub key of validator under control
             set_off_tx (str): Signed tx, which will be sent to chain
             missed_blocks (int): Amount of missed blocks, when validator
@@ -44,7 +46,7 @@ class Guard(object):
         super().__init__()
 
         # Set attributes
-        self.minterapi = MinterAPI(api_url=api_url)
+        self.minterapi = minterapi
         self.pub_key = pub_key
         self.set_off_tx = set_off_tx
         self.missed_blocks = int(missed_blocks)
@@ -108,62 +110,81 @@ class Guard(object):
 
 if __name__ == '__main__':
     try:
-        # Future kwargs for Guard(**kwargs)
-        kwargs = {}
+        # Check for required --config argument
+        configargv = [a for a in sys.argv if '--config=' in a]
+        if not configargv:
+            raise Exception('Required --config argument is missing')
 
-        # Process sys argv and generate kwargs for Guard(**kwargs)
-        if len(sys.argv) == 2 and '--config=' in sys.argv[1]:
-            config = configparser.ConfigParser()
-            config.read(sys.argv[1].split('=')[1])
+        # Parse config and check required data
+        config = configparser.ConfigParser()
+        config.read(configargv[0].split('=')[1])
 
-            # If log file path is provided in config file, create file handler
-            # and remove stream handler
-            if 'SERVICE' in config.sections() and config['SERVICE'].get('LOG') and \
-               config['SERVICE']['LOG'] != '':
-                logger.removeHandler(shandler)
-                fhandler = logging.FileHandler(config['SERVICE']['LOG'])
-                fhandler.setLevel(logging.INFO)
-                fhandler.setFormatter(formatter)
-                logger.addHandler(fhandler)
+        # If log file path is provided in config file, create file handler
+        # and remove stream handler
+        if 'SERVICE' in config.sections() and config['SERVICE'].get('log') and \
+           config['SERVICE']['log'] != '':
+            logger.removeHandler(shandler)
+            fhandler = logging.FileHandler(config['SERVICE']['log'])
+            fhandler.setLevel(logging.INFO)
+            fhandler.setFormatter(formatter)
+            logger.addHandler(fhandler)
 
-            # Check sections
-            for section in ['API', 'NODE']:
-                if section not in config.sections():
-                    raise Exception('Section {} not found'.format(section))
+        # Check sections
+        for section in ['API', 'NODE']:
+            if section not in config.sections():
+                raise Exception('Section {} not found'.format(section))
 
-            # Check sections attributes
-            if config['API'].get('API_URL') is None or \
-               config['API']['API_URL'] == '':
-                raise Exception('API_URL should be provided')
+        # Check sections attributes
+        if config['API'].get('api_url') is None or \
+           config['API']['api_url'] == '':
+            raise Exception('"api_url" should be provided')
 
-            if config['NODE'].get('PUB_KEY') is None or \
-               config['NODE']['PUB_KEY'] == '':
-                raise Exception('PUB_KEY should be provided')
+        if config['NODE'].get('pub_key') is None or \
+           config['NODE']['pub_key'] == '':
+            raise Exception('"pub_key" should be provided')
 
-            if config['NODE'].get('SET_OFF_TX') is None or \
-               config['NODE']['SET_OFF_TX'] == '':
-                raise Exception('SET_OFF_TX should be provided')
+        if config['NODE'].get('set_off_tx') is None or \
+           config['NODE']['set_off_tx'] == '':
+            raise Exception('"set_off_tx" should be provided')
 
-            # Set kwargs
-            kwargs.update({
-                'api_url': config['API']['API_URL'],
-                'pub_key': config['NODE']['PUB_KEY'],
-                'set_off_tx': config['NODE']['SET_OFF_TX']
-            })
+        # Now, when config is parsed and checked, we look for running mode
+        # Create minterapi instance first
+        minterapi = MinterAPI(config['API']['api_url'])
 
-            if config['NODE'].get('MISSED_BLOCKS'):
-                kwargs['missed_blocks'] = int(config['NODE']['MISSED_BLOCKS'])
-        else:
-            for argv in sys.argv:
-                kv = argv.split('=')
-                if kv[0][:2] == '--':
-                    k = kv[0].replace('--', '').replace('-', '_')
-                    v = kv[1]
-                    kwargs[k] = v
+        # If there are only two arguments, this is automatic mode, we create
+        # guard instance and run tracker.
+        # Otherwise, we run actions, depending on manual arguments
+        if len(sys.argv) == 2:
+            kwargs = {
+                'minterapi': minterapi,
+                'pub_key': config['NODE']['pub_key'],
+                'set_off_tx': config['NODE']['set_off_tx']
+            }
 
-        # Create guard object and start tracking
-        guard = Guard(**kwargs)
-        guard.track()
+            if config['NODE'].get('missed_blocks'):
+                kwargs['missed_blocks'] = int(config['NODE']['missed_blocks'])
+
+            # Create guard object and start tracking
+            guard = Guard(**kwargs)
+            guard.track()
+        elif '--on' in sys.argv:
+            # Check if set on tx exists
+            if config['NODE'].get('set_on_tx') is None or \
+               config['NODE']['set_on_tx'] == '':
+                raise Exception('Please, set "set_on_tx" in config file')
+
+            # If everything is ok, send tx
+            response = minterapi.send_transaction(tx=config['NODE']['set_on_tx'])
+            if response.get('error'):
+                raise Exception(response['error'])
+
+            logger.info('Set candidate ON transaction sent')
+        elif '--off' in sys.argv:
+            response = minterapi.send_transaction(tx=config['NODE']['set_off_tx'])
+            if response.get('error'):
+                raise Exception(response['error'])
+
+            logger.info('Set candidate OFF transaction sent')
     except Exception as e:
         logger.error('{}: {}'.format(e.__class__.__name__, e.__str__()))
         sys.exit(1)
