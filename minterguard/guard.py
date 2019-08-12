@@ -82,13 +82,13 @@ class Guard(object):
                     if response['error']['code'] != 404:
                         raise Exception(response['error'])
                     else:
-                        logger.debug("Going for a sleep for {}ms." % self.sleep_time_ms)
+                        logger.debug("Going for a sleep for {}ms.".format(self.sleep_time_ms))
                         time.sleep(self.sleep_time_ms/1000)
                         continue
 
                 # If response is ok, get missed blocks count
                 mb = int(response['result']['missed_blocks_count'])
-                logger.debug("Missed block count: {}" % mb)
+                logger.debug("Missed block count: {}".format(mb))
 
                 # If missed blocks is greater than limit, set candidate off
                 if mb >= self.missed_blocks:
@@ -109,7 +109,7 @@ class Guard(object):
                 ))
 
             # Wait specific time between each loop
-            logger.debug("Going for a sleep for {}ms." % self.sleep_time_ms)
+            logger.debug("Going for a sleep for {}ms.".format(self.sleep_time_ms))
             time.sleep(self.sleep_time_ms/1000)
 
 if __name__ == '__main__':
