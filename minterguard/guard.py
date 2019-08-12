@@ -8,12 +8,14 @@ Or you can provide all needed arguments in command line:
     --pub-key=
     --set-off-tx=
     --missed-blocks= (this argument is optional and is 4 by default)
+    --sleep_time_ms= (this argument is optional and is 1000 by default)
 """
 
 import configparser
 import logging
 import sys
 import time
+import os
 from mintersdk.minterapi import MinterAPI
 from mintersdk.sdk.transactions import MinterTx, MinterSetCandidateOffTx
 
@@ -22,7 +24,7 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 shandler = logging.StreamHandler()
-shandler.setLevel(logging.INFO)
+shandler.setLevel(os.environ.get('LOG_LEVEL', 'INFO').upper())
 shandler.setFormatter(formatter)
 logger.addHandler(shandler)
 
@@ -32,7 +34,7 @@ class Guard(object):
     Guard class
     """
 
-    def __init__(self, api_url, pub_key, set_off_tx, missed_blocks=4):
+    def __init__(self, api_url, pub_key, set_off_tx, missed_blocks=4, sleep_time_ms=1000):
         """
         Args:
             api_url (str): URL for Minter API
@@ -40,6 +42,7 @@ class Guard(object):
             set_off_tx (str): Signed tx, which will be sent to chain
             missed_blocks (int): Amount of missed blocks, when validator
                                  should be offed
+            sleep_time_ms (int): Amount of milliseconds beteen guard eviction
         """
         super().__init__()
 
@@ -48,6 +51,7 @@ class Guard(object):
         self.pub_key = pub_key
         self.set_off_tx = set_off_tx
         self.missed_blocks = int(missed_blocks)
+        self.sleep_time_ms = int(sleep_time_ms)
 
         # Check set off tx to be valid
         tx = MinterTx.from_raw(self.set_off_tx)
@@ -102,9 +106,9 @@ class Guard(object):
                     e.__str__()
                 ))
 
-            # Wait a second between each loop
-            time.sleep(1)
-
+            # Wait specific time between each loop
+            time.sleep(self.sleep_time_ms/1000)
+            logger.debug("Going for a sleep for {}ms." % self.sleep_time_ms)
 
 if __name__ == '__main__':
     try:
@@ -153,6 +157,10 @@ if __name__ == '__main__':
 
             if config['NODE'].get('MISSED_BLOCKS'):
                 kwargs['missed_blocks'] = int(config['NODE']['MISSED_BLOCKS'])
+
+            if config['SERVICE'].get('SLEEP_TIME_MS'):
+                kwargs['sleep_time_ms'] = int(config['SERVICE']['SLEEP_TIME_MS'])
+
         else:
             for argv in sys.argv:
                 kv = argv.split('=')
