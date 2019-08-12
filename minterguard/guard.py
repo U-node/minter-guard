@@ -21,7 +21,7 @@ from mintersdk.sdk.transactions import MinterTx, MinterSetCandidateOffTx
 
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+logger.setLevel(os.environ.get('LOG_LEVEL', 'INFO').upper())
 formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 shandler = logging.StreamHandler()
 shandler.setLevel(os.environ.get('LOG_LEVEL', 'INFO').upper())
