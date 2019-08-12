@@ -82,11 +82,13 @@ class Guard(object):
                     if response['error']['code'] != 404:
                         raise Exception(response['error'])
                     else:
-                        time.sleep(1)
+                        logger.debug("Going for a sleep for {}ms." % self.sleep_time_ms)
+                        time.sleep(self.sleep_time_ms/1000)
                         continue
 
                 # If response is ok, get missed blocks count
                 mb = int(response['result']['missed_blocks_count'])
+                logger.debug("Missed block count: {}" % mb)
 
                 # If missed blocks is greater than limit, set candidate off
                 if mb >= self.missed_blocks:
@@ -99,7 +101,7 @@ class Guard(object):
                         raise Exception(response['error'])
 
                     # Write log info message abount setting candidate off
-                    logger.info('Set candidate off. Blocks missed: {}'.format(mb))
+                    logger.warning('Set candidate off. Blocks missed: {}'.format(mb))
             except Exception as e:
                 logger.error('{}: {}'.format(
                     e.__class__.__name__,
@@ -107,8 +109,8 @@ class Guard(object):
                 ))
 
             # Wait specific time between each loop
-            time.sleep(self.sleep_time_ms/1000)
             logger.debug("Going for a sleep for {}ms." % self.sleep_time_ms)
+            time.sleep(self.sleep_time_ms/1000)
 
 if __name__ == '__main__':
     try:
@@ -126,7 +128,7 @@ if __name__ == '__main__':
                config['SERVICE']['LOG'] != '':
                 logger.removeHandler(shandler)
                 fhandler = logging.FileHandler(config['SERVICE']['LOG'])
-                fhandler.setLevel(logging.INFO)
+                fhandler.setLevel(os.environ.get('LOG_LEVEL', 'INFO').upper())
                 fhandler.setFormatter(formatter)
                 logger.addHandler(fhandler)
 
