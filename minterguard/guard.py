@@ -42,7 +42,7 @@ class Guard(object):
             set_off_tx (str): Signed tx, which will be sent to chain
             missed_blocks (int): Amount of missed blocks, when validator
                                  should be offed
-            sleep_time_ms (int): Amount of milliseconds beteen guard eviction
+            sleep_time_ms (int): Amount of milliseconds between guard eviction
         """
         super().__init__()
 
