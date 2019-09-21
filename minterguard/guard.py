@@ -16,6 +16,8 @@ import logging
 import sys
 import time
 import os
+import json
+
 from mintersdk.minterapi import MinterAPI
 from mintersdk.sdk.transactions import MinterTx, MinterSetCandidateOffTx
 
@@ -34,10 +36,10 @@ class Guard(object):
     Guard class
     """
 
-    def __init__(self, api_url, pub_key, set_off_tx, missed_blocks=4, sleep_time_ms=1000):
+    def __init__(self, api_urls, pub_key, set_off_tx, missed_blocks=4, sleep_time_ms=1000):
         """
         Args:
-            api_url (str): URL for Minter API
+            api_urls (list): Minter API URLs
             pub_key (str): Pub key of validator under control
             set_off_tx (str): Signed tx, which will be sent to chain
             missed_blocks (int): Amount of missed blocks, when validator
@@ -47,7 +49,7 @@ class Guard(object):
         super().__init__()
 
         # Set attributes
-        self.minterapi = MinterAPI(api_url=api_url)
+        self.minterapis = [MinterAPI(api_url) for api_url in api_urls]
         self.pub_key = pub_key
         self.set_off_tx = set_off_tx
         self.missed_blocks = int(missed_blocks)
@@ -58,7 +60,18 @@ class Guard(object):
         if not isinstance(tx, MinterSetCandidateOffTx):
             raise Exception('Set off tx is not instance of MinterSetCandidateOffTx')
 
-        nonce = self.minterapi.get_nonce(tx.from_mx)
+        # Get nonce from API
+        nonce = None
+        for minterapi in self.minterapis:
+            try:
+                nonce = minterapi.get_nonce(tx.from_mx)
+                break
+            except Exception as e:
+                logger.error('{}: {}'.format(
+                    e.__class__.__name__,
+                    e.__str__()
+                ))
+
         if tx.nonce != nonce:
             raise Exception('Set off tx has {} nonce, expected {}'.format(
                 tx.nonce,
@@ -73,9 +86,18 @@ class Guard(object):
         while True:
             try:
                 # Get missed blocks
-                response = self.minterapi.get_missed_blocks(
-                    public_key=self.pub_key
-                )
+                response = None
+                for minterapi in self.minterapis:
+                    try:
+                        response = minterapi.get_missed_blocks(self.pub_key)
+                        break
+                    except Exception as e:
+                        logger.error('{}: {}'.format(
+                            e.__class__.__name__,
+                            e.__str__()
+                        ))
+                if response is None:
+                    raise
 
                 # Raise exception on non 404 error (Validator not found)
                 if response.get('error'):
@@ -93,9 +115,19 @@ class Guard(object):
                 # If missed blocks is greater than limit, set candidate off
                 if mb >= self.missed_blocks:
                     # Send set candidate off transaction
-                    response = self.minterapi.send_transaction(
-                        tx=self.set_off_tx
-                    )
+
+                    response = None
+                    for minterapi in self.minterapis:
+                        try:
+                            response = minterapi.send_transaction(self.set_off_tx)
+                            break
+                        except Exception as e:
+                            logger.error('{}: {}'.format(
+                                e.__class__.__name__,
+                                e.__str__()
+                            ))
+                    if response is None:
+                        raise
 
                     if response.get('error'):
                         raise Exception(response['error'])
@@ -111,6 +143,7 @@ class Guard(object):
             # Wait specific time between each loop
             logger.debug("Going for a sleep for {}ms.".format(self.sleep_time_ms))
             time.sleep(self.sleep_time_ms/1000)
+
 
 if __name__ == '__main__':
     try:
@@ -138,9 +171,9 @@ if __name__ == '__main__':
                     raise Exception('Section {} not found'.format(section))
 
             # Check sections attributes
-            if config['API'].get('API_URL') is None or \
-               config['API']['API_URL'] == '':
-                raise Exception('API_URL should be provided')
+            if config['API'].get('API_URLS') is None or \
+               config['API']['API_URLS'] == '':
+                raise Exception('API_URLS should be provided')
 
             if config['NODE'].get('PUB_KEY') is None or \
                config['NODE']['PUB_KEY'] == '':
@@ -152,7 +185,7 @@ if __name__ == '__main__':
 
             # Set kwargs
             kwargs.update({
-                'api_url': config['API']['API_URL'],
+                'api_urls': json.loads(config['API']['API_URLS']),
                 'pub_key': config['NODE']['PUB_KEY'],
                 'set_off_tx': config['NODE']['SET_OFF_TX']
             })
