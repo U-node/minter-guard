@@ -87,7 +87,9 @@ class Guard(object):
             try:
                 # Get missed blocks
                 response = None
-                for minterapi in self.minterapis:
+                for i, minterapi in enumerate(self.minterapis):
+                    if i > 0:
+                        logger.info('{} attempt with {} API'.format(i, minterapi.api_url))
                     try:
                         response = minterapi.get_missed_blocks(self.pub_key)
                         break
