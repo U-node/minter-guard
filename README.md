@@ -87,7 +87,7 @@ Insert following (example):
 
 ```
 [API]
-API_URL = ["http://127.0.0.1:8841/", "http://127.0.0.2:8841/"]
+API_URL = http://127.0.0.1:8841/ http://127.0.0.2:8841/
 
 [NODE]
 PUB_KEY = Mpd30a965324ffd01c3b61e898137bd6eacd69243b43512ab1dde1deca697f39ad

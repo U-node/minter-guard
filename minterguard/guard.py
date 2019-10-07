@@ -16,7 +16,6 @@ import logging
 import sys
 import time
 import os
-import json
 
 from mintersdk.minterapi import MinterAPI
 from mintersdk.sdk.transactions import MinterTx, MinterSetCandidateOffTx
@@ -173,9 +172,9 @@ if __name__ == '__main__':
                     raise Exception('Section {} not found'.format(section))
 
             # Check sections attributes
-            if config['API'].get('API_URLS') is None or \
-               config['API']['API_URLS'] == '':
-                raise Exception('API_URLS should be provided')
+            if config['API'].get('API_URL') is None or \
+               config['API']['API_URL'] == '':
+                raise Exception('API_URL should be provided')
 
             if config['NODE'].get('PUB_KEY') is None or \
                config['NODE']['PUB_KEY'] == '':
@@ -187,7 +186,7 @@ if __name__ == '__main__':
 
             # Set kwargs
             kwargs.update({
-                'api_urls': json.loads(config['API']['API_URLS']),
+                'api_urls': config['API']['API_URL'].split(),
                 'pub_key': config['NODE']['PUB_KEY'],
                 'set_off_tx': config['NODE']['SET_OFF_TX']
             })

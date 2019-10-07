@@ -10,7 +10,6 @@ Script accepts 2 required arguments:
 """
 
 import sys
-import json
 import getpass
 import configparser
 
@@ -32,11 +31,11 @@ if __name__ == '__main__':
 
     # Try to get API urls
     try:
-        api_urls = json.loads(config['API']['API_URLS'])
+        api_urls = config['API']['API_URL'].split()
         if len(api_urls) == 0:
             raise
     except Exception:
-        print('API_URLS is not set in config file')
+        print('API_URL is not set in config file')
         sys.exit(1)
 
     # Try to get pub key
