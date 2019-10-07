@@ -12,6 +12,7 @@ Script accepts 2 required arguments:
 import sys
 import getpass
 import configparser
+
 from mintersdk.minterapi import MinterAPI
 from mintersdk.sdk.transactions import (MinterSetCandidateOnTx,
                                         MinterSetCandidateOffTx)
@@ -28,10 +29,10 @@ if __name__ == '__main__':
     config = configparser.ConfigParser()
     config.read(sys.argv[1])
 
-    # Try to get API url
+    # Try to get API urls
     try:
-        api_url = config['API']['API_URL'].strip()
-        if api_url == '':
+        api_urls = config['API']['API_URL'].split()
+        if len(api_urls) == 0:
             raise
     except Exception:
         print('API_URL is not set in config file')
@@ -57,15 +58,29 @@ if __name__ == '__main__':
 
     # When all data seems to be set, create txs
     try:
-        # Get API and wallet
-        minterapi = MinterAPI(api_url)
+        # Get APIs
+        minterapis = [MinterAPI(api_url) for api_url in api_urls]
+
+        # Get wallet
         wallet = MinterWallet.create(mnemonic=seed)
+
+        # Get nonce from API
+        nonce = None
+        for minterapi in minterapis:
+            try:
+                nonce = minterapi.get_nonce(address=wallet['address'])
+                break
+            except Exception as e:
+                print(e.__str__())
+
+        if nonce is None:
+            raise
 
         if action == 'on':
             # Set candidate on tx
             tx = MinterSetCandidateOnTx(
                 pub_key=pub_key,
-                nonce=minterapi.get_nonce(address=wallet['address']),
+                nonce=nonce,
                 gas_coin='BIP'
             )
             tx.sign(wallet['private_key'])
@@ -74,7 +89,7 @@ if __name__ == '__main__':
             # Set candidate off tx
             tx = MinterSetCandidateOffTx(
                 pub_key=pub_key,
-                nonce=minterapi.get_nonce(address=wallet['address']),
+                nonce=nonce,
                 gas_coin='BIP'
             )
             tx.sign(wallet['private_key'])

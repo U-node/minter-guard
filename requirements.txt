@@ -1,1 +1,2 @@
-minter-sdk (https://github.com/U-node/minter-sdk)
+configparser
+git+https://github.com/U-node/minter-sdk

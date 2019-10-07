@@ -87,7 +87,7 @@ Insert following (example):
 
 ```
 [API]
-API_URL = http://127.0.0.1:8841/
+API_URL = http://127.0.0.1:8841/ http://127.0.0.2:8841/
 
 [NODE]
 PUB_KEY = Mpd30a965324ffd01c3b61e898137bd6eacd69243b43512ab1dde1deca697f39ad
@@ -98,11 +98,11 @@ MISSED_BLOCKS = 3
 LOG = /home/minter-guard/minter-guard.log
 ```
 Note, that you **MUST** provide correct:
-1. API node address.
+1. API nodes address.
 2. PUB_KEY of your node.
 3. MISSED_BLOCKS. This is trigger parameter to execute OFF_TX transaction. Note, that after execution of TX, your node will MISS _at least_ 2 next blocks.
 
-API node **MUST** be synced to network **COMPLETELY**.
+API nodes **MUST** be synced to network **COMPLETELY**.
 Provided txgenerator uses API node to get nonce for OFF_TX
 
 ### Generate OFF_TX

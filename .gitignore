@@ -1,4 +1,6 @@
 /appenv/
 /__pycache__/
+venv/
+.idea/
 *.sublime*
 *.log
