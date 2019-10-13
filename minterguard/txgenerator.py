@@ -90,7 +90,8 @@ if __name__ == '__main__':
             tx = MinterSetCandidateOffTx(
                 pub_key=pub_key,
                 nonce=nonce,
-                gas_coin='BIP'
+                gas_coin='BIP',
+                gas_price=50
             )
             tx.sign(wallet['private_key'])
             tx_str = 'Set candidate OFF tx: {}'.format(tx.signed_tx)
