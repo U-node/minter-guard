@@ -7,6 +7,8 @@ for you to set candidate on, when everything is ok.
 Script accepts 2 required arguments:
  - config file with API_URL and PUB_KEY
  - needed tx for node (on/off)
+Script accepts 1 non-required argument:
+ - multi set script to multisignature mode 
 """
 
 import sys
@@ -21,7 +23,7 @@ from mintersdk.sdk.wallet import MinterWallet
 
 if __name__ == '__main__':
     # Process argv
-    if len(sys.argv) != 3:
+    if len(sys.argv) < 3 or len(sys.argv) > 4:
         print('Please, provide 2 required arguments: config file, action')
         sys.exit(1)
 
@@ -53,8 +55,22 @@ if __name__ == '__main__':
         print('Specify correct tx action (on/off)')
         sys.exit(1)
 
+    multisig = False
+    try:
+        if sys.argv[3] == "multi":
+            multisig = True
+    except:
+        pass
     # Get params from user
-    seed = getpass.getpass('Provide seed phrase (password like input): ')
+    if multisig:
+        seeds = []
+        count = int(input('Provide count of seed phrases: '))
+        multi_addr = input('Provide address multisig: ')
+        for i in range(count):
+            seeds.append(getpass.getpass('Provide seed phrase (password like input): '))
+
+    else:
+        seed = getpass.getpass('Provide seed phrase (password like input): ')
 
     # When all data seems to be set, create txs
     try:
@@ -62,13 +78,21 @@ if __name__ == '__main__':
         minterapis = [MinterAPI(api_url) for api_url in api_urls]
 
         # Get wallet
-        wallet = MinterWallet.create(mnemonic=seed)
+        if multisig:
+            privates_key = []
+            for seed in seeds:
+                privates_key.append(MinterWallet.create(mnemonic=seed)["private_key"])
+        else:    
+            wallet = MinterWallet.create(mnemonic=seed)
 
         # Get nonce from API
         nonce = None
         for minterapi in minterapis:
             try:
-                nonce = minterapi.get_nonce(address=wallet['address'])
+                if not multisig:
+                    nonce = minterapi.get_nonce(address=wallet['address'])
+                else:
+                    nonce = minterapi.get_nonce(address=multi_addr)
                 break
             except Exception as e:
                 print(e.__str__())
@@ -83,7 +107,10 @@ if __name__ == '__main__':
                 nonce=nonce,
                 gas_coin='BIP'
             )
-            tx.sign(wallet['private_key'])
+            if multisig:
+                tx.sign(private_key=privates_key,ms_address=multi_addr)
+            else:
+                tx.sign(wallet['private_key'])
             tx_str = 'Set candidate ON tx: {}'.format(tx.signed_tx)
         elif action == 'off':
             # Set candidate off tx
@@ -93,13 +120,20 @@ if __name__ == '__main__':
                 gas_coin='BIP',
                 gas_price=50
             )
-            tx.sign(wallet['private_key'])
+            if multisig:
+                tx.sign(private_key=privates_key,ms_address=multi_addr)
+            else:
+                tx.sign(wallet['private_key'])
             tx_str = 'Set candidate OFF tx: {}'.format(tx.signed_tx)
 
         # Print collected data for user
         print('Public key: {}'.format(pub_key))
-        print('From address: {}'.format(wallet['address']))
+        if multisig:
+            print('From address: {}'.format(multi_addr))
+        else:
+            print('From address: {}'.format(wallet['address']))
         print(tx_str)
     except Exception as e:
         print(e.__str__())
         sys.exit(1)
+
