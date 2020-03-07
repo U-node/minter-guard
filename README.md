@@ -107,7 +107,13 @@ Provided txgenerator uses API node to get nonce for OFF_TX
 
 ### Generate OFF_TX
 
-Execute:
+
+If you want to sign with multi sign address you need execute:
+```
+/home/minter-guard/appenv/bin/python /home/minter-guard/appenv/lib/python3.6/site-packages/minterguard/txgenerator.py /home/minter-guard/.config off multi
+```
+
+Otherwise execute what
 
 ```
 /home/minter-guard/appenv/bin/python /home/minter-guard/appenv/lib/python3.6/site-packages/minterguard/txgenerator.py /home/minter-guard/.config off
